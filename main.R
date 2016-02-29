@@ -36,6 +36,7 @@ data2007 <- read.table("Data/August2007.txt", header = T, sep=",")
 data2007$GMT_date <- NULL
 data2007$LMT_date <- as.POSIXct(data2007$LMT_date, format='%d-%m-%Y %H:%M:%S')
 
+## Pre-processing
 # delete obvious outlier caused by GPS error
 data2007 <- subset(data2007, Locale_E > 1400000)
 
