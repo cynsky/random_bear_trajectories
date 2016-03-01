@@ -11,8 +11,9 @@ library(sp)
 library(rgdal)
 library(rgeos)
 library(spacetime)
-
-
+library(lattice)
+library(maptools)
+library(plyr)
 ## Source functions
 source('Functions/create_random_traj.R')
 
@@ -54,34 +55,31 @@ lKoski <- SpatialLinesDataFrame(lKoski, data=data.frame(ID="1",name="Koski"), ma
 mypoints <-  SpatialPointsDataFrame(cbind(Koski2007$Locale_E, Koski2007$Locale_N), data =Koski2007,
                                     proj4string=CRS("+init=epsg:2400"))
 mypoints@data$tspannum<- as.numeric(mypoints@data$tspan)
+mypoints<-mypoints[25:26,]
+mypoints<-SpatialPointsDataFrame(mypoints@coords,as.data.frame(mypoints@data$tspannum))
+names(mypoints)<-'tspannum'
+V=7
 
-spplot(mypoints,zcol='tspannum',colorkey = list(
-  right = list( # see ?levelplot in package trellis, argument colorkey:
-    fun = draw.colorkey, 
-    args = list(
-      key = list(
-        at = seq(0, max(mypoints@data$tspannum), 10), # colour breaks
-        col = bpy.colors(length(seq(0, max(mypoints@data$tspannum), 10))), # colours
-        labels = list(
-          at = c(0, median(seq(0, max(mypoints@data$tspannum), 10)),740), 
-          labels = c("0 hour", "370 hour", "740 hour")
-        )
-      )
-    )
-  )
-))
 
 ## Compute random trajectories
-# xyt = spatiotemporal points, V = Speed, t = time interval
+Rtrajectories<-list()
+
 for (i in seq(1:100)){
   
-  create_random_traj(xyt,V,t)
-  
+  Rtrajectory<-create_random_traj(mypoints,V,1)
+  Rtrajectories<-c(Rtrajectories,Rtrajectory)
   
   
 }
 
+
+plot(mypoints,col='blue',xlim=c(bbox(mypoints)[1][1]-(V/5),bbox(mypoints)[,2][1]+(V/5)),axes=T,
+     ylim=c(bbox(mypoints)[2][1]-(V/5),bbox(mypoints)[,2][2]+(V/5)),xlab='X (meters)', ylab= 'Y (meters)',
+     main='Random trajectory between known points')
+lapply(Rtrajectories,function(x) lines(x[1]@coords,add=T,col='red'))
+plot(mypoints,add=T,col='blue')
 ## Create line density surface of trajectories 
 ## Evaluate results
 
 ## Visualize results
+
