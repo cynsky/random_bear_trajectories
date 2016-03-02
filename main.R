@@ -8,19 +8,18 @@
 ## Import modules
 library(rgl)
 library(sp)
-library(raster)
 library(rgdal)
 library(rgeos)
 library(spacetime)
 library(lattice)
 library(maptools)
 library(plyr)
-
+library(raster)
 ## Source functions
 source('Functions/create_random_traj.R')
+source('Functions/maxspeed2009.R')
+source('Functions/getbeardata.R')
 source('Functions/LineDensityRaster.R')
-
-
 ## Create directories
 data_dir = 'Data'
 output_dir = 'Output'
@@ -38,38 +37,35 @@ load("Data/mating2009.Rdata")
 DEM<- readGDAL("Data/DEM.tif") 
 data2007 <- read.table("Data/August2007.txt", header = T, sep=",")
 data2007$GMT_date <- NULL
-data2007$LMT_date <- as.POSIXct(data2007$LMT_date, format='%d-%m-%Y %H:%M:%S')
+data2007$LMT_date <- as.POSIXct(data2007$LMT_date, 
+                                  format='%d-%m-%Y %H:%M:%S')
 
-## Pre-processing
-# delete obvious outlier caused by GPS error
-data2007 <- subset(data2007, Locale_E > 1400000)
 
-# SUBSETS and ordering
 Koski2007 <- subset(data2007, PubName == "Koski (2310)")
 Koski2007 <- Koski2007[order(Koski2007$LMT_date),]      # order on data_time
+tstartkoski <- min(Koski2007$LMT_date)
+Koski2007<-getbeardata(data2007,Pubname = "Koski (2310)",tstart = tstartkoski )
 
-tstart <- min(Koski2007$LMT_date)
-Koski2007$tspan <- difftime(Koski2007$LMT_date, tstart, units="hours")
+mating2009$LMT_date <- as.POSIXct(mating2009$LMT_date, 
+                                  format='%d-%m-%Y %H:%M:%S')
 
-lKoski <- Lines(Line(cbind(Koski2007$Locale_E, Koski2007$Locale_N)),"1")
-lKoski <- SpatialLines(list(lKoski), proj4string = CRS("+init=epsg:2400"))
-lKoski <- SpatialLinesDataFrame(lKoski, data=data.frame(ID="1",name="Koski"), match.ID = T)
-
-mypoints <-  SpatialPointsDataFrame(cbind(Koski2007$Locale_E, Koski2007$Locale_N), data =Koski2007,
-                                    proj4string=CRS("+init=epsg:2400"))
-mypoints@data$tspannum<- as.numeric(mypoints@data$tspan)
-mypoints<-mypoints[23:26,]
-mypoints<-SpatialPointsDataFrame(mypoints@coords,as.data.frame(mypoints@data$tspannum))
-names(mypoints)<-'tspannum'
-V=40
+Krut2009 <- subset(mating2009, PubName == "Krut (2937)")
+tstartkrut <- min(Krut2009$LMT_date)
+Krut2009<-getbeardata(mating2009,Pubname = "Krut (2937)",tstart = tstartkrut )
 
 
+mspeedKrut <- maxspeed2009('Krut') 
+
+mypoints<-Krut2009
+#mypoints<-subset(mypoints,tspannum>450 & tspannum<700)
+mypoints<-subset(mypoints,tspannum>690 & tspannum<700)
 ## Compute random trajectories
+V=mspeedKrut*1000+100
 Rtrajectories<-list()
 
 for (i in seq(1:100)){
   
-  Rtrajectory<-create_random_traj(mypoints,V,2)
+  Rtrajectory<-create_random_traj(mypoints,V,4)
   Rtrajectories<-c(Rtrajectories,Rtrajectory)
   
   
@@ -80,15 +76,14 @@ plot(mypoints,col='blue',xlim=c(bbox(mypoints)[1][1]-(V/5),bbox(mypoints)[,2][1]
      ylim=c(bbox(mypoints)[2][1]-(V/5),bbox(mypoints)[,2][2]+(V/5)),xlab='X (meters)', ylab= 'Y (meters)',
      main='Random trajectory between known points')
 lapply(Rtrajectories,function(x) lines(x[1]@coords,add=T,col='red'))
-plot(mypoints,add=T,col='blue')
 
-## Create line density surface of trajectories
-LineDensity <- LineDensityRaster(Rtrajectories)
+#plot(mypoints,add=T,col='blue')
+## Create line density surface of trajectories 
+LineDensity <- LineDensityRaster(Rtrajectories,500)
 
 plot(LineDensity, col=colorRampPalette(c("white", "orangered", "black"))(101))
-plot(mypoints,add=T,pch=19,col='yellow', type='o')
-
-
+plot(mypoints,add=T,pch=19,col='yellow')
+lapply(Rtrajectories,function(x) lines(x[1]@coords,add=T,col=rgb(0,0,0,alpha=0.15)))
 ## Evaluate results
 
 ## Visualize results
