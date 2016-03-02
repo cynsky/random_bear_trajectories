@@ -8,14 +8,17 @@
 ## Import modules
 library(rgl)
 library(sp)
+library(raster)
 library(rgdal)
 library(rgeos)
 library(spacetime)
 library(lattice)
 library(maptools)
 library(plyr)
+
 ## Source functions
 source('Functions/create_random_traj.R')
+source('Functions/LineDensityRaster.R')
 
 
 ## Create directories
@@ -55,10 +58,10 @@ lKoski <- SpatialLinesDataFrame(lKoski, data=data.frame(ID="1",name="Koski"), ma
 mypoints <-  SpatialPointsDataFrame(cbind(Koski2007$Locale_E, Koski2007$Locale_N), data =Koski2007,
                                     proj4string=CRS("+init=epsg:2400"))
 mypoints@data$tspannum<- as.numeric(mypoints@data$tspan)
-mypoints<-mypoints[25:26,]
+mypoints<-mypoints[23:26,]
 mypoints<-SpatialPointsDataFrame(mypoints@coords,as.data.frame(mypoints@data$tspannum))
 names(mypoints)<-'tspannum'
-V=7
+V=40
 
 
 ## Compute random trajectories
@@ -66,7 +69,7 @@ Rtrajectories<-list()
 
 for (i in seq(1:100)){
   
-  Rtrajectory<-create_random_traj(mypoints,V,1)
+  Rtrajectory<-create_random_traj(mypoints,V,2)
   Rtrajectories<-c(Rtrajectories,Rtrajectory)
   
   
@@ -78,7 +81,14 @@ plot(mypoints,col='blue',xlim=c(bbox(mypoints)[1][1]-(V/5),bbox(mypoints)[,2][1]
      main='Random trajectory between known points')
 lapply(Rtrajectories,function(x) lines(x[1]@coords,add=T,col='red'))
 plot(mypoints,add=T,col='blue')
-## Create line density surface of trajectories 
+
+## Create line density surface of trajectories
+LineDensity <- LineDensityRaster(Rtrajectories)
+
+plot(LineDensity, col=colorRampPalette(c("white", "orangered", "black"))(101))
+plot(mypoints,add=T,pch=19,col='yellow', type='o')
+
+
 ## Evaluate results
 
 ## Visualize results
