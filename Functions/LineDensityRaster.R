@@ -17,14 +17,12 @@ LineDensityRaster <- function(listOfSpatialPointsDF,cellfactor){
     
     line_obj <- Lines(Line(i@coords), "1")
     line_sp <- SpatialLines(list(line_obj), proj4string=CRS("+init=epsg:2400"))
-    line_df <- SpatialLinesDataFrame(line_sp,
-                                     data=data.frame(ID=iterations,name="Koski", data=i@data))
-    pathList <- c(pathList, line_df)
+    pathList <- c(pathList, line_sp)
   }
   
   
   # Rtrajectories[[1]]@proj4string
- 
+  
   # specify output extent based on input extents
   outRasterExtent <- vector()
   
@@ -59,28 +57,11 @@ LineDensityRaster <- function(listOfSpatialPointsDF,cellfactor){
   for(i in pathList){
     
     # create single raster per line
-    singleRaster <- raster(outRasterExtent, crs = projection(i),
+    singleRaster <- raster(outRasterExtent, crs = projection(i), vals=0,
                            ncols=(outRasterExtent[2]/cellfactor) - (outRasterExtent[1]/cellfactor), #xmax - xmin
-                           nrows=(outRasterExtent[4]/cellfactor) - (outRasterExtent[3]/cellfactor))
+                           nrows=(outRasterExtent[4]/cellfactor) - (outRasterExtent[3]/cellfactor)) #ymax - ymin
     
-    # loop over each cell in the single raster and find if it intersects with a line.
-    # If it does, assign a value of 1
-    # If it doesn't, assign a value of 0
-    overlay <- sapply(1:ncell(singleRaster), function(j) {
-      tmp_rst <- singleRaster
-      tmp_rst[j] <- 1
-      tmp_shp <- rasterToPolygons(tmp_rst)
-      
-      if (gIntersects(i, tmp_shp)) {
-        crp <- crop(i, tmp_shp)
-        crp_length <- gLength(crp)
-        if(crp_length > 0){
-          return(1)}
-      } else {
-        return(0)
-      }
-    })
-    singleRaster[] <- overlay
+    singleRaster <- rasterize(i, singleRaster, fun='count', background=0)
     
     # add the single raster to the final raster
     LineDensity <- LineDensity + singleRaster
