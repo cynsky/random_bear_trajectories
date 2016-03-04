@@ -1,11 +1,11 @@
-maxspeed2009 <- function(bearname){
+maxspeed2009 <- function(data,bearname){
   #' Standardise values
   #'      Arg:
   #'          bearname(str): name of the bear
   #'      Return:
   #'        	max speed of bear
 
-  bear <- subset(mating2009, Name==bearname)
+  bear <- subset(data, PubName==bearname)
   
   n <- nrow(bear)
   
@@ -18,6 +18,10 @@ maxspeed2009 <- function(bearname){
   mspeed<-max(speed)
   return(mspeed)
 }
+
+
+
+
 
 
 
